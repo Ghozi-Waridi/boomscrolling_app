@@ -1,0 +1,120 @@
+{
+  "model": "claude-fable-5",
+  "effort": "high",
+  "permissions": {
+    "allow": [
+      "flutter",
+      "dart",
+      "git",
+      "bash",
+      "firebase",
+      "adb"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "tool": "Bash",
+        "condition": "command matches 'git|flutter|dart|firebase'",
+        "action": "rtk hook claude"
+      }
+    ],
+    "PostToolUse": [
+      {
+        "tool": "Bash",
+        "condition": "command matches 'flutter test|flutter analyze'",
+        "action": "notify_if_error"
+      }
+    ]
+  },
+  "multiAgent": {
+    "enabled": true,
+    "agents": [
+      {
+        "name": "lock-manager",
+        "role": "Lock Management Agent",
+        "responsibility": "Handle timer activation, screen lock/unlock state management",
+        "trigger": "User presses 'Start Lock' or timer events",
+        "outputs": ["lock state in Firestore", "local DB updates"],
+        "model": "claude-opus-5",
+        "tools": ["Read", "Write", "Bash"]
+      },
+      {
+        "name": "analytics",
+        "role": "Analytics & Reporting Agent",
+        "responsibility": "Process lock sessions, calculate stats, generate reports",
+        "trigger": "After lock session completes",
+        "outputs": ["session data", "aggregated metrics", "daily/weekly reports"],
+        "model": "claude-opus-5",
+        "tools": ["Read", "Bash"]
+      },
+      {
+        "name": "engagement",
+        "role": "User Engagement Agent",
+        "responsibility": "Manage notifications, streak tracking, leaderboard updates",
+        "trigger": "Analytics data ready, streak milestones reached",
+        "outputs": ["notification payloads", "streak data", "leaderboard updates"],
+        "model": "claude-opus-5",
+        "tools": ["Read", "Write"]
+      },
+      {
+        "name": "sync",
+        "role": "Data Sync Agent",
+        "responsibility": "Batch sync local data to Firebase, handle offline scenarios",
+        "trigger": "Every 5 mins or on demand, connectivity changes",
+        "outputs": ["cloud backup", "conflict resolution", "sync status"],
+        "model": "claude-opus-5",
+        "tools": ["Bash", "Read", "Write"]
+      }
+    ],
+    "orchestration": {
+      "pattern": "event-driven",
+      "coordination": "through Firestore + local event bus",
+      "errorHandling": "retry with exponential backoff",
+      "stateSharing": "via Firebase Realtime DB + sqflite"
+    }
+  },
+  "rtk": {
+    "enabled": true,
+    "tokenSavingsTarget": "60-70%",
+    "commands": [
+      {
+        "pattern": "flutter pub outdated",
+        "replacement": "rtk flutter pub outdated"
+      },
+      {
+        "pattern": "find lib -name '*.dart'",
+        "replacement": "rtk dart:files"
+      },
+      {
+        "pattern": "git log --oneline --graph --all",
+        "replacement": "rtk git log --graph"
+      },
+      {
+        "pattern": "git status",
+        "replacement": "rtk git status"
+      },
+      {
+        "pattern": "flutter analyze",
+        "replacement": "rtk flutter analyze"
+      }
+    ]
+  },
+  "firebase": {
+    "project": "boomscrolling",
+    "emulatorMode": false,
+    "collections": [
+      "users",
+      "sessions",
+      "reports",
+      "leaderboard"
+    ],
+    "securityRules": "firestore.rules"
+  },
+  "development": {
+    "debugLogging": true,
+    "hotReload": true,
+    "buildCacheSize": "1GB",
+    "minAndroidSdk": 21
+  }
+}
